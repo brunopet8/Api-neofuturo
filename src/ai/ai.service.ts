@@ -32,7 +32,7 @@ export class AiService {
       Responda ESTRITAMENTE em formato JSON com o seguinte schema:
       {
         "priority": "alta" | "media" | "baixa",
-        "summary_text": "resumo conciso de até 3 frases sobre a relevância e prioridade"
+        "summary_text": "resumo de até 2 frases explicando o motivo da prioridade definida"
       }
     `;
 

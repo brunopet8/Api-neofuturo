@@ -7,5 +7,6 @@ import { AuthModule } from '../auth/auth.module';
   imports: [AuthModule],
   controllers: [AiController],
   providers: [AiService],
+  exports: [AiService], 
 })
 export class AiModule {}

@@ -23,8 +23,10 @@ export class PurchaseRequestsService {
     });
   }
 
-  findAll() {
+  // Agora aceita filtro opcional por status (?status=pendente)
+  findAll(status?: string) {
     return this.prisma.purchaseRequest.findMany({
+      where: status ? { status } : undefined,
       include: {
         supplier: true,
         ai_reviews: true,
@@ -65,6 +67,20 @@ export class PurchaseRequestsService {
       where: { id },
       data: dto,
       include: { supplier: true },
+    });
+  }
+
+  // Novo método específico para PATCH /purchase-requests/:id/status
+  async updateStatus(id: string, status: string) {
+    await this.findOne(id);
+
+    return this.prisma.purchaseRequest.update({
+      where: { id },
+      data: { status },
+      include: {
+        supplier: true,
+        ai_reviews: true,
+      },
     });
   }
 
