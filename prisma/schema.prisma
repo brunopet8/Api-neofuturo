@@ -1,0 +1,63 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String   @id @default(uuid())
+  name          String
+  email         String   @unique
+  password_hash String
+  created_at    DateTime @default(now())
+
+  @@map("users")
+}
+
+model Supplier {
+  id                String            @id @default(uuid())
+  name              String
+  email             String
+  phone             String?
+  category          String?
+  created_at        DateTime          @default(now())
+  purchase_requests PurchaseRequest[]
+
+  @@map("suppliers")
+}
+
+model PurchaseRequest {
+  id             String     @id @default(uuid())
+  item_name      String
+  quantity       Int
+  supplier_id    String?
+  supplier       Supplier?  @relation(fields: [supplier_id], references: [id])
+  requester_name String
+  justification  String
+  status         String     @default("pendente") // pendente, aprovado, rejeitado
+  created_at     DateTime   @default(now())
+  ai_reviews     AiReview[]
+
+  @@map("purchase_requests")
+}
+
+model AiReview {
+  id                  String          @id @default(uuid())
+  purchase_request_id String
+  purchase_request    PurchaseRequest @relation(fields: [purchase_request_id], references: [id], onDelete: Cascade)
+  priority            String          // alta, media, baixa
+  summary_text        String
+  generated_at        DateTime        @default(now())
+
+  @@map("ai_reviews")
+}
+
