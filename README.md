@@ -28,7 +28,7 @@ Copie o arquivo de exemplo e preencha suas variáveis:
 ```bash
 cp .env.example .env
 ```
-> Adicione uma chave válida da OpenAI na variável `OPENAI_API_KEY`.
+> Configure um segredo para assinatura dos tokens em `JWT_SECRET` e adicione uma chave válida da OpenAI na variável `OPENAI_API_KEY`.
 
 ### 3. Subir o Banco de Dados (Docker)
 ```bash
