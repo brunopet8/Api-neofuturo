@@ -9,7 +9,7 @@ API REST desenvolvida em **NestJS**, **PostgreSQL** e **Prisma ORM**, com autent
 * **PostgreSQL**
 * **Prisma ORM**
 * **Passport JWT** + **Bcrypt**
-* **OpenAI API** (`gpt-3.5-turbo`)
+* **OpenAI API** (`gpt-4o-mini`)
 * **Docker Compose**
 
 ---
