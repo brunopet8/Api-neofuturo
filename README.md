@@ -29,3 +29,86 @@ Aplicação full-stack desenvolvida com NestJS, Next.js, PostgreSQL e Prisma ORM
 ```bash
 git clone [https://github.com/brunopet8/Api-neofuturo.git](https://github.com/brunopet8/Api-neofuturo.git)
 cd Api-neofuturo
+```
+
+### 2. Configurar o Backend
+
+1. Instale as dependências:
+```bash
+npm install
+```
+
+2. Configure as variáveis de ambiente a partir do exemplo:
+```bash
+cp .env.example .env
+```
+> Preencha JWT_SECRET com uma chave segura e configure a sua chave da OpenAI em OPENAI_API_KEY.
+
+3. Suba o contentor da base de dados PostgreSQL com Docker Compose:
+```bash
+docker compose up -d
+```
+
+4. Execute as migrações da base de dados:
+```bash
+npx prisma migrate dev
+```
+
+5. Inicie a API NestJS:
+```bash
+npm run start:dev
+```
+A API estará acessível em http://localhost:3000.
+
+---
+
+### 3. Configurar e Rodar o Frontend (Next.js)
+
+1. Num novo terminal, aceda à pasta frontend e instale as dependências:
+```bash
+cd frontend
+npm install
+```
+
+2. Configure o ficheiro de variáveis de ambiente:
+```bash
+echo "NEXT_PUBLIC_API_URL=http://localhost:3000" > .env.local
+```
+> Nota para GitHub Codespaces: Caso utilize o Codespaces, altere a visibilidade da porta 3000 para Public e informe o URL público gerado em NEXT_PUBLIC_API_URL.
+
+3. Inicie o servidor de desenvolvimento do Next.js:
+```bash
+npm run dev
+```
+O frontend estará disponível em http://localhost:3001 (ou http://localhost:3000).
+
+---
+
+## Endpoints da API REST
+
+### Autenticação (Públicos)
+* POST /auth/register — Cria um utilizador (palavra-passe armazenada com hash bcrypt).
+* POST /auth/login — Valida as credenciais e retorna um token JWT.
+
+### Fornecedores (Protegidos por Bearer Token)
+* POST /suppliers — Regista um fornecedor (com validação de formato de e-mail).
+* GET /suppliers — Lista todos os fornecedores.
+
+### Solicitações de Compra (Protegidos por Bearer Token)
+* POST /purchase-requests — Cria uma solicitação de compra (validações: item_name, quantity > 0 e requester_name obrigatórios; supplier_id opcional).
+* GET /purchase-requests — Lista solicitações de compra, com suporte a filtro por status: GET /purchase-requests?status=pendente.
+* GET /purchase-requests/:id — Detalhe da solicitação, incluindo dados do fornecedor e parecer de IA (se existir).
+* POST /purchase-requests/:id/review — Envia os dados (item, quantidade, justificativa) para o modelo gpt-4o-mini, classifica a prioridade (alta, media, baixa), gera um resumo explicativo de até 2 frases, persiste em ai_reviews e retorna o parecer.
+* PATCH /purchase-requests/:id/status — Atualiza o status da solicitação (pendente, aprovado, rejeitado).
+
+---
+
+## Funcionalidades do Frontend
+
+* Autenticação: Ecrã de login e registo com armazenamento do token JWT e proteção de rotas autenticadas.
+* Listagem com Filtros: Tabela com listagem de solicitações e filtro dinâmico por status (pendente, aprovado, rejeitado).
+* Indicador Visual de Prioridade: Badges coloridos indicando a prioridade gerada pela IA (alta, media, baixa).
+* Modal de Detalhes: Apresenta dados da solicitação, fornecedor vinculado e parecer de IA.
+* Ação de IA em Tempo Real: Botão para gerar o parecer com IA e exibir o resultado sem recarregar a página.
+* Alteração de Status: Atualização do status da compra diretamente no modal de detalhes.
+* Cadastros: Formulários modais para registo de novo fornecedor e abertura de nova solicitação de compra.
