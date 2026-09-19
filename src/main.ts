@@ -4,13 +4,15 @@ import { ValidationPipe } from '@nestjs/common';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  
+  // Ativa CORS para permitir chamadas do Next.js
+  app.enableCors();
 
-  // Ativa a validação automática em todas as rotas da API
   app.useGlobalPipes(
     new ValidationPipe({
-      whitelist: true, // Remove campos que não foram definidos no DTO
-      forbidNonWhitelisted: true, // Rejeita requisições se mandarem dados extras não permitidos
-      transform: true, // Converte tipos automaticamente (ex: string para número se necessário)
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
     }),
   );
 

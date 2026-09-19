@@ -1,0 +1,201 @@
+#!/bin/bash
+
+BASE_URL="http://localhost:3000"
+COLOR_GREEN='\033[0;32m'
+COLOR_RED='\033[0;31m'
+COLOR_BLUE='\033[0;34m'
+NC='\033[0m'
+
+pass() { echo -e "${COLOR_GREEN}✔ PASS: $1${NC}"; }
+fail() { echo -e "${COLOR_RED}✘ FAIL: $1${NC}"; }
+info() { echo -e "\n${COLOR_BLUE}=== $1 ===${NC}"; }
+
+EMAIL="qa_$(date +%s)@teste.com"
+PASSWORD="senhaSegura123"
+
+info "1. Autenticação: Cadastro de usuário (POST /auth/register)"
+REGISTER_RES=$(curl -s -w "\n%{http_code}" -X POST "$BASE_URL/auth/register" \
+  -H "Content-Type: application/json" \
+  -d "{\"name\":\"QA Tester\",\"email\":\"$EMAIL\",\"password\":\"$PASSWORD\"}")
+STATUS=$(echo "$REGISTER_RES" | tail -n1)
+BODY=$(echo "$REGISTER_RES" | sed '$d')
+
+if [ "$STATUS" -eq 201 ]; then
+  pass "Usuário cadastrado com status 201"
+else
+  fail "Esperava 201, recebeu $STATUS: $BODY"
+fi
+
+info "2. Autenticação: Login e obtenção de JWT (POST /auth/login)"
+LOGIN_RES=$(curl -s -X POST "$BASE_URL/auth/login" \
+  -H "Content-Type: application/json" \
+  -d "{\"email\":\"$EMAIL\",\"password\":\"$PASSWORD\"}")
+TOKEN=$(echo "$LOGIN_RES" | grep -o '"access_token":"[^"]*' | cut -d'"' -f4)
+
+if [ -n "$TOKEN" ]; then
+  pass "Token JWT gerado com sucesso"
+else
+  fail "Falha ao obter token JWT: $LOGIN_RES"
+  exit 1
+fi
+
+info "3. Segurança: Acesso sem token às rotas protegidas"
+NO_AUTH_STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X GET "$BASE_URL/suppliers")
+if [ "$NO_AUTH_STATUS" -eq 401 ]; then
+  pass "Acesso sem token bloqueado com 401 Unauthorized"
+else
+  fail "Esperava 401, recebeu $NO_AUTH_STATUS"
+fi
+
+info "4. Validação: Formato de e-mail do fornecedor"
+INVALID_EMAIL_RES=$(curl -s -w "\n%{http_code}" -X POST "$BASE_URL/suppliers" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Empresa Fake","email":"email_sem_arroba.com"}')
+STATUS=$(echo "$INVALID_EMAIL_RES" | tail -n1)
+BODY=$(echo "$INVALID_EMAIL_RES" | sed '$d')
+
+if [ "$STATUS" -eq 400 ]; then
+  pass "E-mail inválido rejeitado com 400 Bad Request"
+else
+  fail "Esperava 400, recebeu $STATUS: $BODY"
+fi
+
+info "5. Fornecedores: Cadastro e listagem (POST /suppliers e GET /suppliers)"
+SUPPLIER_RES=$(curl -s -X POST "$BASE_URL/suppliers" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Dell Brasil","email":"vendas@dell.com","category":"TI"}')
+SUPPLIER_ID=$(echo "$SUPPLIER_RES" | grep -o '"id":"[^"]*' | head -n1 | cut -d'"' -f4)
+
+if [ -n "$SUPPLIER_ID" ]; then
+  pass "Fornecedor cadastrado com ID: $SUPPLIER_ID"
+else
+  fail "Falha ao cadastrar fornecedor: $SUPPLIER_RES"
+fi
+
+SUPPLIERS_LIST_STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X GET "$BASE_URL/suppliers" \
+  -H "Authorization: Bearer $TOKEN")
+if [ "$SUPPLIERS_LIST_STATUS" -eq 200 ]; then
+  pass "Listagem de fornecedores retornou 200 OK"
+else
+  fail "Esperava 200, recebeu $SUPPLIERS_LIST_STATUS"
+fi
+
+info "6. Validação: Quantity deve ser maior que zero"
+INVALID_QTY_RES=$(curl -s -w "\n%{http_code}" -X POST "$BASE_URL/purchase-requests" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"item_name":"Mouse","quantity":0,"requester_name":"Bruno","justification":"Urgente"}')
+STATUS=$(echo "$INVALID_QTY_RES" | tail -n1)
+BODY=$(echo "$INVALID_QTY_RES" | sed '$d')
+
+if [ "$STATUS" -eq 400 ]; then
+  pass "Quantity = 0 rejeitado com 400 Bad Request"
+else
+  fail "Esperava 400, recebeu $STATUS: $BODY"
+fi
+
+info "7. Validação: Campos obrigatórios ausentes"
+MISSING_FIELD_RES=$(curl -s -w "\n%{http_code}" -X POST "$BASE_URL/purchase-requests" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"quantity":5}')
+STATUS=$(echo "$MISSING_FIELD_RES" | tail -n1)
+
+if [ "$STATUS" -eq 400 ]; then
+  pass "Campos obrigatórios ausentes barrados com 400 Bad Request"
+else
+  fail "Esperava 400, recebeu $STATUS"
+fi
+
+info "8. Compras: Cadastro de solicitações (POST /purchase-requests)"
+REQ_1=$(curl -s -X POST "$BASE_URL/purchase-requests" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d "{\"item_name\":\"Monitor 4K\",\"quantity\":3,\"requester_name\":\"Time Design\",\"justification\":\"Monitores para os novos designers contratados\",\"supplier_id\":\"$SUPPLIER_ID\"}")
+REQ_ID_1=$(echo "$REQ_1" | grep -o '"id":"[^"]*' | head -n1 | cut -d'"' -f4)
+
+REQ_2=$(curl -s -X POST "$BASE_URL/purchase-requests" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d "{\"item_name\":\"Cadeira Gamer\",\"quantity\":1,\"requester_name\":\"Time Ops\",\"justification\":\"Cadeira quebrada precisa de reposicao urgente\"}")
+REQ_ID_2=$(echo "$REQ_2" | grep -o '"id":"[^"]*' | head -n1 | cut -d'"' -f4)
+
+if [ -n "$REQ_ID_1" ] && [ -n "$REQ_ID_2" ]; then
+  pass "Duas solicitações cadastradas com sucesso: $REQ_ID_1 e $REQ_ID_2"
+else
+  fail "Erro ao criar solicitações: $REQ_1 | $REQ_2"
+fi
+
+info "9. IA: Gerar parecer na rota exata (POST /purchase-requests/:id/review)"
+REVIEW_RES=$(curl -s -w "\n%{http_code}" -X POST "$BASE_URL/purchase-requests/$REQ_ID_1/review" \
+  -H "Authorization: Bearer $TOKEN")
+STATUS=$(echo "$REVIEW_RES" | tail -n1)
+BODY=$(echo "$REVIEW_RES" | sed '$d')
+
+if [ "$STATUS" -eq 201 ]; then
+  PRIORITY=$(echo "$BODY" | grep -o '"priority":"[^"]*' | cut -d'"' -f4)
+  pass "Parecer da IA gerado via POST /purchase-requests/:id/review com prioridade: '$PRIORITY'"
+else
+  fail "Falha ao gerar parecer (status $STATUS): $BODY"
+fi
+
+info "10. Compras: Detalhes com parecer de IA e fornecedor (GET /purchase-requests/:id)"
+DETAIL_RES=$(curl -s -X GET "$BASE_URL/purchase-requests/$REQ_ID_1" \
+  -H "Authorization: Bearer $TOKEN")
+
+if [[ "$DETAIL_RES" == *"ai_reviews"* ]] && [[ "$DETAIL_RES" == *"supplier"* ]]; then
+  pass "GET /purchase-requests/:id retornou solicitação com 'supplier' e 'ai_reviews' aninhados"
+else
+  fail "Não encontrou 'supplier' ou 'ai_reviews' na resposta: $DETAIL_RES"
+fi
+
+info "11. Status: Atualizar status na rota exata (PATCH /purchase-requests/:id/status)"
+STATUS_RES=$(curl -s -w "\n%{http_code}" -X PATCH "$BASE_URL/purchase-requests/$REQ_ID_1/status" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"status":"aprovado"}')
+STATUS=$(echo "$STATUS_RES" | tail -n1)
+BODY=$(echo "$STATUS_RES" | sed '$d')
+
+if [ "$STATUS" -eq 200 ] && [[ "$BODY" == *"\"status\":\"aprovado\""* ]]; then
+  pass "Status atualizado para 'aprovado' via PATCH /purchase-requests/:id/status"
+else
+  fail "Falha ao atualizar status (status $STATUS): $BODY"
+fi
+
+info "12. Validação: Rejeitar status inválido (ex: 'cancelado')"
+INVALID_STATUS_RES=$(curl -s -w "\n%{http_code}" -X PATCH "$BASE_URL/purchase-requests/$REQ_ID_1/status" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"status":"cancelado"}')
+STATUS=$(echo "$INVALID_STATUS_RES" | tail -n1)
+
+if [ "$STATUS" -eq 400 ]; then
+  pass "Status não permitido rejeitado com 400 Bad Request"
+else
+  fail "Esperava 400 para status inválido, recebeu $STATUS"
+fi
+
+info "13. Filtro por status (GET /purchase-requests?status=...)"
+ALL_APROVADOS=$(curl -s -X GET "$BASE_URL/purchase-requests?status=aprovado" \
+  -H "Authorization: Bearer $TOKEN")
+ALL_PENDENTES=$(curl -s -X GET "$BASE_URL/purchase-requests?status=pendente" \
+  -H "Authorization: Bearer $TOKEN")
+
+if [[ "$ALL_APROVADOS" == *"$REQ_ID_1"* ]] && [[ "$ALL_APROVADOS" != *"$REQ_ID_2"* ]]; then
+  pass "Filtro ?status=aprovado retornou apenas a solicitação aprovada"
+else
+  fail "Filtro ?status=aprovado falhou"
+fi
+
+if [[ "$ALL_PENDENTES" == *"$REQ_ID_2"* ]] && [[ "$ALL_PENDENTES" != *"$REQ_ID_1"* ]]; then
+  pass "Filtro ?status=pendente retornou apenas a solicitação pendente"
+else
+  fail "Filtro ?status=pendente falhou"
+fi
+
+echo -e "\n${COLOR_GREEN}===============================================${NC}"
+echo -e "${COLOR_GREEN} TODOS OS TESTES PASSARAM COM 100% DE SUCESSO! ${NC}"
+echo -e "${COLOR_GREEN}===============================================${NC}"
