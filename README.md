@@ -100,15 +100,3 @@ O frontend estará disponível em http://localhost:3001 (ou http://localhost:300
 * GET /purchase-requests/:id — Detalhe da solicitação, incluindo dados do fornecedor e parecer de IA (se existir).
 * POST /purchase-requests/:id/review — Envia os dados (item, quantidade, justificativa) para o modelo gpt-4o-mini, classifica a prioridade (alta, media, baixa), gera um resumo explicativo de até 2 frases, persiste em ai_reviews e retorna o parecer.
 * PATCH /purchase-requests/:id/status — Atualiza o status da solicitação (pendente, aprovado, rejeitado).
-
----
-
-## Funcionalidades do Frontend
-
-* Autenticação: tela de login e registo com armazenamento do token JWT e proteção de rotas autenticadas.
-* Listagem com Filtros: Tabela com listagem de solicitações e filtro dinâmico por status (pendente, aprovado, rejeitado).
-* Indicador Visual de Prioridade: Badges coloridos indicando a prioridade gerada pela IA (alta, media, baixa).
-* Modal de Detalhes: Apresenta dados da solicitação, fornecedor vinculado e parecer de IA.
-* Ação de IA em Tempo Real: Botão para gerar o parecer com IA e exibir o resultado sem recarregar a página.
-* Alteração de Status: Atualização do status da compra diretamente no modal de detalhes.
-* Cadastros: Formulários modais para registo de novo fornecedor e abertura de nova solicitação de compra.
