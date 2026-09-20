@@ -105,7 +105,7 @@ O frontend estará disponível em http://localhost:3001 (ou http://localhost:300
 
 ## Funcionalidades do Frontend
 
-* Autenticação: Ecrã de login e registo com armazenamento do token JWT e proteção de rotas autenticadas.
+* Autenticação: tela de login e registo com armazenamento do token JWT e proteção de rotas autenticadas.
 * Listagem com Filtros: Tabela com listagem de solicitações e filtro dinâmico por status (pendente, aprovado, rejeitado).
 * Indicador Visual de Prioridade: Badges coloridos indicando a prioridade gerada pela IA (alta, media, baixa).
 * Modal de Detalhes: Apresenta dados da solicitação, fornecedor vinculado e parecer de IA.
