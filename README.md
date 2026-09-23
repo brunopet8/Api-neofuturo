@@ -72,7 +72,7 @@ npm install
 
 2. Configure o ficheiro de variáveis de ambiente:
 ```bash
-echo "NEXT_PUBLIC_API_URL=http://localhost:3000" > .env.local
+echo "NEXT_PUBLIC_API_URL=/api/backend" > .env.local
 ```
 > Nota para GitHub Codespaces: Caso utilize o Codespaces, altere a visibilidade da porta 3000 para Public e informe o URL público gerado em NEXT_PUBLIC_API_URL.
 
